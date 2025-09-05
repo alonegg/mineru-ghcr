@@ -3,6 +3,9 @@ name: Build and Push to GHCR
 on:
   push:
     branches: [ main ]
+    paths:
+      - Dockerfile
+      - .github/workflows/**
   workflow_dispatch:
 
 env:
@@ -26,18 +29,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download upstream Dockerfile (with fallback)
-        run: |
-          set -e
-          URL1="https://gcore.jsdelivr.net/gh/opendatalab/MinerU@master/docker/china/Dockerfile"
-          URL2="https://raw.githubusercontent.com/opendatalab/MinerU/master/docker/china/Dockerfile"
-          echo "Fetching Dockerfile from $URL1 ..."
-          if ! curl -fsSL "$URL1" -o Dockerfile ; then
-            echo "Primary URL failed, trying fallback..."
-            curl -fsSL "$URL2" -o Dockerfile
-          fi
-          echo "Downloaded Dockerfile:" && head -n 20 Dockerfile || true
 
       - name: Extract Docker metadata (tags, labels)
         id: meta

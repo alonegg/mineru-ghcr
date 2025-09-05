@@ -1,0 +1,62 @@
+name: Build and Push to GHCR
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download upstream Dockerfile (with fallback)
+        run: |
+          set -e
+          URL1="https://gcore.jsdelivr.net/gh/opendatalab/MinerU@master/docker/china/Dockerfile"
+          URL2="https://raw.githubusercontent.com/opendatalab/MinerU/master/docker/china/Dockerfile"
+          echo "Fetching Dockerfile from $URL1 ..."
+          if ! curl -fsSL "$URL1" -o Dockerfile ; then
+            echo "Primary URL failed, trying fallback..."
+            curl -fsSL "$URL2" -o Dockerfile
+          fi
+          echo "Downloaded Dockerfile:" && head -n 20 Dockerfile || true
+
+      - name: Extract Docker metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

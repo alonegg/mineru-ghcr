@@ -24,6 +24,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Show disk usage (before)
+        run: |
+          df -h || true
+          docker system df || true
+
+      - name: Maximize build space on runner
+        uses: easimon/maximize-build-space@v10
+        with:
+          root-reserve-mb: 6144
+          remove-dotnet: true
+          remove-android: true
+          remove-haskell: true
+          remove-codeql: true
+          remove-docker-images: true
+          # build-mount-path can relocate docker storage; leaving default works for most cases
+          # build-mount-path: /var/lib/docker
+
+      - name: Show disk usage (after)
+        run: |
+          df -h || true
+          docker system df || true
+
       - name: Set up Docker Buildx (docker-container driver)
         uses: docker/setup-buildx-action@v3
         with:
@@ -58,3 +80,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false

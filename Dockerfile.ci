@@ -1,0 +1,33 @@
+# CI-friendly Dockerfile: install MinerU only, defer model downloads to container startup
+# Base image aligned with China region mirrors
+FROM docker.m.daocloud.io/lmsysorg/sglang:v0.4.10.post2-cu126
+
+# (Optional) Alternative for blackwell GPU
+# FROM docker.m.daocloud.io/lmsysorg/sglang:v0.4.10.post2-cu128-b200
+
+# Install minimal deps for fonts and OpenCV
+RUN apt-get update && \
+    apt-get install -y \
+        fonts-noto-core \
+        fonts-noto-cjk \
+        fontconfig \
+        libgl1 && \
+    fc-cache -fv && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install MinerU core only (no model downloads here)
+RUN python3 -m pip install -U 'mineru[core]' -i https://mirrors.aliyun.com/pypi/simple --break-system-packages && \
+    python3 -m pip cache purge
+
+# Provide an entrypoint that optionally downloads models at runtime
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Defaults: don't download models during container start unless explicitly asked
+ENV MINERU_MODEL_SOURCE=modelscope \
+    MINERU_MODEL_LIST= \
+    MINERU_DOWNLOAD=0
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["bash"]

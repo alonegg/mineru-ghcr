@@ -31,3 +31,5 @@ ENV MINERU_MODEL_SOURCE=modelscope \
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]
+
+# ci: trigger at 2025-09-06T02:17:00Z
